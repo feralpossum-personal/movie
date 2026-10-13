@@ -402,6 +402,13 @@ function makeAdd(m){
     if(pid&&c.people.indexOf(pid)<0)c.people.push(pid);
   };
 }
+/* TMDB provider ids for AU. When every platform still switched on has a known id, discovery asks TMDB for just those services, so a narrow choice like Netflix-only does not run dry. */
+var PROV_ID={netflix:8,stan:21,disney:337,prime:119,binge:385,paramount:531,max:1899,apple:350};
+function providerFilter(){
+  var on=PORDER.filter(function(p){return state.off.indexOf(p)<0}),ids=[];
+  for(var i=0;i<on.length;i++){if(!PROV_ID[on[i]])return '';ids.push(PROV_ID[on[i]])}
+  return ids.join('|');
+}
 function discoverJobs(add,pages){
   var jobs=[];
   var kinds=state.type==='movie'?['movie']:state.type==='show'?['tv']:['movie','tv'];
@@ -411,6 +418,8 @@ function discoverJobs(add,pages){
     pages.forEach(function(page){
       var base={watch_region:'AU','with_watch_monetization_types':'flatrate|free|ads|rent|buy',sort_by:'popularity.desc','vote_count.gte':300,'vote_average.gte':6.5,include_adult:'false',page:page};
       if(ids.length)base.with_genres=ids.join('|');
+      var pf=providerFilter();
+      if(pf){base.with_watch_providers=pf;base.with_watch_monetization_types='flatrate'}
       if(state.maxLen&&kind==='movie')base['with_runtime.lte']=state.maxLen;
       function go(extra,score){
         jobs.push(api('discover/'+kind,Object.assign({},base,extra)).then(function(r){(r.results||[]).forEach(function(raw){add(raw,kind,score,null)})}).catch(noteErr));
