@@ -801,7 +801,7 @@ function setStatus(){
   if(topping){el.textContent='Finding more titles…';return}
   if(locked&&!cands.length&&poolDry){el.textContent='That is everything for these filters tonight. Press Start over to see them again.';return}
   if(locked){el.textContent='Spin again for a fresh wheel. Anything already on a wheel is removed for tonight.';return}
-  el.textContent=items.length?'Tap the wheel or press Spin.':(poolDry?'Nothing matches these filters. Try loosening them (for example "Any of these" genres).':'');
+  el.textContent=items.length?'Tap the wheel centre or press Spin. Tap a slice to see that title.':(poolDry?'Nothing matches these filters. Try loosening them (for example "Any of these" genres).':'');
 }
 function posterImg(it,size,cls){
   return it.p?'<img class="'+cls+'" src="'+IMG+size+it.p+'" alt="" loading="lazy">':'<div class="'+cls+'"></div>';
@@ -1064,7 +1064,16 @@ function findCand(k){
 }
 
 $('#spin').addEventListener('click',spin);
-cv.addEventListener('click',spin);
+/* Tap the hub (or the rim) to spin; tap a slice to open that title's card, where it can be saved, marked seen or added to favourites. */
+cv.addEventListener('click',function(e){
+  if(spinning||loading||topping)return;
+  var r=cv.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),d=Math.sqrt(dx*dx+dy*dy)/r.width;
+  if(!items.length||d<0.11||d>0.46){spin();return}
+  var n=items.length,seg=TAU/n,ang=((Math.atan2(dy,dx)+Math.PI/2-rot)%TAU+TAU)%TAU,c=items[Math.min(n-1,Math.floor(ang/seg))];
+  var m=findCand(key(c.d))||c;
+  current=m;renderWinner();
+  $('#winner').scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});
+});
 $('#mute').addEventListener('click',function(){state.muted=!state.muted;save();renderMute();if(!state.muted)audio()});
 $('#q').addEventListener('input',onSearch);
 $('#clearFav').addEventListener('click',function(){editor().fav=[];favsChanged()});
