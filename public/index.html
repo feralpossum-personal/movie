@@ -186,7 +186,11 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
           <button type="button" data-len="100" aria-pressed="false">Up to 100 min</button>
           <button type="button" data-len="120" aria-pressed="false">Up to 2 hours</button>
         </div>
-        <div class="label">Genre (pick any)</div>
+        <div class="label">Genre</div>
+        <div class="seg" id="genreMode" role="group" aria-label="Genre matching">
+          <button type="button" data-mode="any" aria-pressed="true">Any of these</button>
+          <button type="button" data-mode="all" aria-pressed="false">All of these</button>
+        </div>
         <div class="row" id="genreChips"></div>
         <div class="label">Original language (pick any)</div>
         <div class="row" id="langChips"></div>
@@ -285,7 +289,14 @@ var GEN={
 };
 var GENRES=Object.keys(GEN);
 var ID_NAME={28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',878:'Sci-Fi',53:'Thriller',10752:'War',37:'Western',10759:'Action & Adventure',10762:'Kids',10763:'News',10764:'Reality',10765:'Sci-Fi & Fantasy',10766:'Soap',10767:'Talk',10768:'War & Politics'};
-function gnames(it,n){var out=[];(it.g||[]).forEach(function(id){var s=ID_NAME[id];if(s&&out.indexOf(s)<0)out.push(s)});return out.slice(0,n).join(', ')}
+/* Genres you have picked are listed first, so it is clear why a title matched. */
+function gnames(it,n){
+  var out=[];(it.g||[]).forEach(function(id){var s=ID_NAME[id];if(s&&out.indexOf(s)<0)out.push(s)});
+  var kind=tmdbKind(it),hit=[];
+  state.genres.forEach(function(g){(GEN[g][kind]||[]).forEach(function(id){if((it.g||[]).indexOf(id)>=0&&ID_NAME[id]&&hit.indexOf(ID_NAME[id])<0)hit.push(ID_NAME[id])})});
+  out=hit.concat(out.filter(function(x){return hit.indexOf(x)<0}));
+  return out.slice(0,n).join(', ');
+}
 
 var LANGS=[['en','English'],['ko','Korean'],['ja','Japanese'],['fr','French'],['es','Spanish'],['de','German'],['it','Italian'],['hi','Hindi'],['zh','Chinese'],['pt','Portuguese'],['sv','Swedish'],['da','Danish'],['tr','Turkish']];
 var WORLD=['ko','ja','es','fr'];
@@ -305,7 +316,7 @@ var state={
   people:(Array.isArray(saved.people)&&saved.people.length)?saved.people:[{id:'p1',name:'Us',fav:Array.isArray(saved.fav)?saved.fav:[],here:true}],
   editing:saved.editing||'',
   off:saved.off||[],genres:saved.genres||[],langs:saved.langs||[],type:saved.type||'any',
-  maxLen:saved.maxLen||0,hidden:saved.hidden||{},later:Array.isArray(saved.later)?saved.later:[],muted:!!saved.muted
+  maxLen:saved.maxLen||0,hidden:saved.hidden||{},later:Array.isArray(saved.later)?saved.later:[],muted:!!saved.muted,genreAll:!!saved.genreAll
 };
 state.people.forEach(function(p){p.fav=Array.isArray(p.fav)?p.fav:[];p.here=p.here!==false;p.name=String(p.name||'Friend').slice(0,20);p.id=p.id||newId()});
 if(!state.people.some(function(p){return p.id===state.editing}))state.editing=state.people[0].id;
@@ -381,7 +392,8 @@ function mini(it){return {k:it.k,id:it.id,t:it.t,y:it.y,g:it.g,l:it.l,p:it.p}}
 function genreOk(it){
   if(!state.genres.length)return true;
   var kind=tmdbKind(it);
-  return state.genres.some(function(g){return (GEN[g][kind]||[]).some(function(id){return (it.g||[]).indexOf(id)>=0})});
+  function has(g){return (GEN[g][kind]||[]).some(function(id){return (it.g||[]).indexOf(id)>=0})}
+  return state.genreAll?state.genres.every(has):state.genres.some(has);
 }
 function typeOk(it){return state.type==='any'||it.k===state.type}
 function langOk(it){
@@ -415,9 +427,10 @@ function discoverJobs(add,pages){
   kinds.forEach(function(kind){
     var ids=[];state.genres.forEach(function(g){(GEN[g][kind]||[]).forEach(function(id){if(ids.indexOf(id)<0)ids.push(id)})});
     if(state.genres.length&&!ids.length)return;
+    if(state.genreAll&&state.genres.some(function(g){return !(GEN[g][kind]||[]).length}))return;
     pages.forEach(function(page){
       var base={watch_region:'AU','with_watch_monetization_types':'flatrate|free|ads|rent|buy',sort_by:'popularity.desc','vote_count.gte':300,'vote_average.gte':6.5,include_adult:'false',page:page};
-      if(ids.length)base.with_genres=ids.join('|');
+      if(ids.length)base.with_genres=ids.join(state.genreAll?',':'|');
       var pf=providerFilter();
       if(pf){base.with_watch_providers=pf;base.with_watch_monetization_types='flatrate'}
       if(state.maxLen&&kind==='movie')base['with_runtime.lte']=state.maxLen;
@@ -787,7 +800,7 @@ function setStatus(){
   if(topping){el.textContent='Finding more titles…';return}
   if(locked&&!cands.length&&poolDry){el.textContent='That is everything for these filters tonight. Press Start over to see them again.';return}
   if(locked){el.textContent='Spin again for a fresh wheel. Anything already on a wheel is removed for tonight.';return}
-  el.textContent=items.length?'Tap the wheel or press Spin.':'';
+  el.textContent=items.length?'Tap the wheel or press Spin.':(poolDry?'Nothing matches these filters. Try loosening them (for example "Any of these" genres).':'');
 }
 function posterImg(it,size,cls){
   return it.p?'<img class="'+cls+'" src="'+IMG+size+it.p+'" alt="" loading="lazy">':'<div class="'+cls+'"></div>';
@@ -906,6 +919,7 @@ function renderChips(){
   });
   $('#platChips').innerHTML=html;
   Array.prototype.forEach.call(document.querySelectorAll('#typeSeg button'),function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-type')===state.type))});
+  Array.prototype.forEach.call(document.querySelectorAll('#genreMode button'),function(b){b.setAttribute('aria-pressed',String((b.getAttribute('data-mode')==='all')===!!state.genreAll))});
   Array.prototype.forEach.call(document.querySelectorAll('#lenSeg button'),function(b){b.setAttribute('aria-pressed',String(+b.getAttribute('data-len')===state.maxLen))});
 }
 function renderPeople(){
@@ -1101,6 +1115,10 @@ $('#typeSeg').addEventListener('click',function(e){
 $('#lenSeg').addEventListener('click',function(e){
   var b=e.target.closest('button');if(!b)return;
   state.maxLen=+b.getAttribute('data-len');filtersChanged();
+});
+$('#genreMode').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  state.genreAll=b.getAttribute('data-mode')==='all';filtersChanged();
 });
 $('#genreChips').addEventListener('click',function(e){
   var b=e.target.closest('.chip');if(!b)return;
