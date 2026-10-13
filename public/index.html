@@ -545,13 +545,17 @@ function compute(){
     pl.sort(function(a,b){return PLAT[a].t-PLAT[b].t||PORDER.indexOf(a)-PORDER.indexOf(b)});
     /* A title that several people's favourites point to is a better bet for a shared evening. */
     var bonus=multi&&c.people.length>1?0.6*(c.people.length-1):0;
-    out.push({d:it,pl:pl,main:pl[0],tier:PLAT[pl[0]].t,score:c.score+0.04*(it.v||0)+bonus,why:c.rel.slice(0,2),link:pv.link,rb:pv.rb||[],rt:pv.rt||0,sn:pv.sn||0});
+    /* Rating counts for a lot: a weighted average that pulls titles with few votes toward 7, so a 9.5 from 12 votes cannot beat a solid 8.3 from thousands. Titles linked to someone's favourites keep a head start over generic popular ones. */
+    var wr=((it.v||0)*(it.vc||0)+7*300)/((it.vc||0)+300);
+    var fromFav=c.rel&&c.rel.length?1.5:0;
+    out.push({d:it,pl:pl,main:pl[0],tier:PLAT[pl[0]].t,score:c.score+0.2*wr+fromFav+bonus,why:c.rel.slice(0,2),link:pv.link,rb:pv.rb||[],rt:pv.rt||0,sn:pv.sn||0});
   });
   return out;
 }
 function byTier(a,b){return a.tier-b.tier||b.score-a.score}
 function drawFresh(){
-  var ranked=cands.slice().sort(function(a,b){return b.score-a.score}).slice(0,20);
+  /* Early spins draw from the very best of the list; later ones widen out as the best have been used up. */
+  var ranked=cands.slice().sort(function(a,b){return b.score-a.score}).slice(0,seen.size<16?10:20);
   for(var i=ranked.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=ranked[i];ranked[i]=ranked[j];ranked[j]=t}
   items=ranked.slice(0,8).sort(byTier);
   locked=false;
