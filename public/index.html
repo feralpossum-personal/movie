@@ -480,6 +480,53 @@ function clip(txt,max){
   while(txt.length>1&&ctx.measureText(txt+'…').width>max)txt=txt.slice(0,-1);
   return txt.replace(/\s+$/,'')+'…';
 }
+/* Titles wrap onto up to three lines and shrink a little if needed; only a title too long even then gets an ellipsis. */
+function wrapLines(txt,maxW){
+  var words=txt.split(/\s+/).filter(Boolean),lines=[],line='';
+  words.forEach(function(w){
+    var test=line?line+' '+w:w;
+    if(ctx.measureText(test).width<=maxW){line=test;return}
+    if(line){lines.push(line);line=''}
+    if(ctx.measureText(w).width<=maxW){line=w;return}
+    /* a very long word, or a script written without spaces: break it by character */
+    var chunk='';
+    Array.from(w).forEach(function(ch){
+      if(ctx.measureText(chunk+ch).width<=maxW){chunk+=ch}else{if(chunk)lines.push(chunk);chunk=ch}
+    });
+    line=chunk;
+  });
+  if(line)lines.push(line);
+  return lines;
+}
+function fitTitle(txt,seg,wr,base,n){
+  var maxW=wr*0.64,maxLines=3,fs,lines,lh;
+  for(var k=0;k<=6;k++){
+    fs=Math.max(8,Math.round(base*(1-k*0.06)));
+    ctx.font='800 '+fs+'px Figtree,system-ui,sans-serif';
+    lines=wrapLines(txt,maxW);
+    lh=fs*1.12;
+    var longest=0;lines.forEach(function(l){var w=ctx.measureText(l).width;if(w>longest)longest=w});
+    var inner=Math.max(wr*0.93-longest,wr*0.2);
+    var avail=n===1?wr*1.6:Math.min(wr*1.5,2*inner*Math.tan(Math.min(seg/2,1.4)))*0.88;
+    if(lines.length<=maxLines&&lines.length*lh<=avail)return {fs:fs,lines:lines,lh:lh};
+  }
+  if(lines.length>maxLines){
+    lines=lines.slice(0,maxLines);
+    var last=lines[maxLines-1];
+    while(last.length>1&&ctx.measureText(last+'…').width>maxW)last=last.slice(0,-1);
+    lines[maxLines-1]=last.replace(/\s+$/,'')+'…';
+  }
+  return {fs:fs,lines:lines,lh:lh};
+}
+var layoutSig='',layouts=[];
+function layoutFor(n,seg,wr,base){
+  var sig=S+'|'+items.map(function(c){return key(c.d)}).join(',');
+  if(sig!==layoutSig){
+    layoutSig=sig;
+    layouts=items.map(function(c){return fitTitle(c.d.t,seg,wr,base,n)});
+  }
+  return layouts;
+}
 function draw(){
   if(!S)return;
   var c=S/2,R=c-S*0.01,rim=S*0.065,wr=R-rim,i;
@@ -503,15 +550,17 @@ function draw(){
     ctx.font='500 '+Math.round(S*0.035)+'px Figtree,system-ui,sans-serif';
     ctx.fillText(loading?'One moment':'Loosen the filters',c,c+S*0.03);
   }else{
-    var seg=TAU/n,fs=Math.round(S*(n<=5?0.05:0.043));
+    var seg=TAU/n,fs=Math.round(S*(n<=5?0.05:0.043)),L=layoutFor(n,seg,wr,fs);
     for(i=0;i<n;i++){
       var s0=rot+i*seg-Math.PI/2,col=PLAT[items[i].main].c;
       ctx.beginPath();ctx.moveTo(c,c);ctx.arc(c,c,wr,s0,s0+seg);ctx.closePath();
       ctx.fillStyle=col;ctx.fill();ctx.lineWidth=S*0.006;ctx.strokeStyle='#1a0f2e';ctx.stroke();
       ctx.save();ctx.translate(c,c);ctx.rotate(s0+seg/2);
       ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillStyle=fgFor(col);
-      ctx.font='800 '+fs+'px Figtree,system-ui,sans-serif';
-      ctx.fillText(clip(items[i].d.t,wr*0.6),wr*0.93,0);
+      ctx.font='800 '+L[i].fs+'px Figtree,system-ui,sans-serif';
+      for(var j=0;j<L[i].lines.length;j++){
+        ctx.fillText(L[i].lines[j],wr*0.93,(j-(L[i].lines.length-1)/2)*L[i].lh);
+      }
       ctx.restore();
     }
   }
@@ -782,7 +831,7 @@ renderChips();renderFavs();renderPicker();renderWinner();renderHistory();
 loadTrending();
 rebuild();
 fit();
-if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit)}
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){layoutSig='';fit()})}
 })();
 </script>
 </body>
