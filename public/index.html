@@ -5,13 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1a0f2e">
 <meta name="description" content="Pick what you have enjoyed, spin the wheel, and see where to watch it in Australia.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Movie Wheel">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Movie Night Wheel</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%23ffc93c%27/%3E%3Cpath d=%27M32 32 L32 2 A30 30 0 0 1 58 17Z%27 fill=%27%23e50914%27/%3E%3Cpath d=%27M32 32 L58 17 A30 30 0 0 1 58 47Z%27 fill=%27%232fb36d%27/%3E%3Cpath d=%27M32 32 L58 47 A30 30 0 0 1 32 62Z%27 fill=%27%236b3fd4%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%278%27 fill=%27%23ffc93c%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Layout: wheel and tonight's pick on the left (sticky on wide screens), mood filters and favourites on the right, the full ranked list underneath in four columns: Netflix, free, paid, rent or buy. Committed single look: a game-show stage. */
+/* Layout: wheel and tonight's pick on the left (sticky on wide screens); who is watching, mood filters and favourites on the right; the full ranked list and the shelves (saved, already suggested, seen) underneath. Committed single look: a game-show stage. */
 :root{
   --stage:#1a0f2e;
   --stage-hi:#34206a;
@@ -41,6 +47,10 @@ h2{font-family:var(--font-display);font-weight:400;font-size:1.1rem;margin:0 0 1
 a{color:var(--bulb)}
 .muted{color:var(--muted)}
 
+.banner{border:1.5px solid var(--bulb);background:#3a2373;border-radius:12px;padding:12px 14px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.banner p{margin:0;flex:1 1 240px}
+.banner .acts{display:flex;gap:8px;flex-wrap:wrap}
+
 .main{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
 @media(min-width:980px){
   .main{grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:36px;align-items:start}
@@ -53,12 +63,14 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
 .spin-row{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
 .status{margin:0;text-align:center;color:var(--muted);font-size:.9rem;min-height:1.4em}
 .status.err{color:#ffb4c3}
+#confetti{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:50}
 
 .btn{font:inherit;font-weight:700;cursor:pointer;border-radius:999px;border:1.5px solid var(--line);padding:.55rem 1.05rem;background:transparent;color:var(--ink);min-height:44px}
 .btn:hover{border-color:var(--muted)}
 .btn:disabled{opacity:.55;cursor:default}
 .btn.primary{font-family:var(--font-display);font-weight:400;font-size:1.3rem;letter-spacing:.05em;padding:.7rem 2.6rem;background:var(--bulb);color:#2a1500;border-color:#fff1b8;box-shadow:0 5px 0 #a8741c}
 .btn.primary:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 #a8741c}
+.btn.small{min-height:38px;padding:.3rem .85rem;font-size:.9rem}
 :focus-visible{outline:3px solid var(--bulb);outline-offset:2px}
 
 .win{background:linear-gradient(160deg,#3a2373,var(--panel));border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
@@ -69,12 +81,15 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
 @media(max-width:420px){.poster{width:72px}}
 .win h3{font-family:var(--font-display);font-weight:400;font-size:1.55rem;line-height:1.1;margin:0 0 4px;text-wrap:balance;overflow-wrap:anywhere}
 .meta{margin:0;color:var(--muted);font-size:.92rem}
+.meta + .meta{margin-top:2px}
 .blurb{margin:12px 0 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .watch{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 8px}
 .watch .big{font-weight:800;font-size:1.05rem;padding:.4rem .95rem;border-radius:10px;background:var(--c);color:var(--fg)}
 .watch .also{color:var(--muted);font-size:.88rem}
 .why{margin:0 0 12px;font-size:.92rem;color:var(--muted)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sec-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.note{margin:12px 0 0;font-size:.92rem;color:var(--bulb)}
 
 .label{font-size:.76rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;font-weight:800}
 .row{display:flex;flex-wrap:wrap;gap:8px}
@@ -83,17 +98,28 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
 .chip[aria-pressed="true"]{background:var(--ink);color:#25104a;border-color:var(--ink)}
 .chip .dot{width:.7rem;height:.7rem;border-radius:50%;background:var(--c)}
 .chip.off{opacity:.55}
-.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+.seg{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
 .seg button{font:inherit;font-weight:600;border:0;background:transparent;color:var(--ink);padding:.4rem .95rem;min-height:38px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:#25104a}
 
-.hint{margin:0 0 10px;color:var(--muted);font-size:.92rem}
+.people{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pchip{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;padding:2px 4px 2px 2px}
+.pchip[data-editing="true"]{border-color:var(--bulb);background:#3a2373}
+.pchip .pname{font:inherit;font-weight:700;color:var(--ink);background:transparent;border:0;padding:.35rem .6rem;min-height:36px;cursor:pointer;border-radius:999px}
+.pchip .pname small{color:var(--muted);font-weight:600;margin-left:.3rem}
+.pchip .here{display:inline-flex;align-items:center;gap:.35rem;font-size:.82rem;color:var(--muted);padding:0 .5rem 0 .2rem;min-height:36px;cursor:pointer}
+.pchip .here input{width:18px;height:18px;accent-color:var(--bulb)}
+.pchip .prm{font:inherit;border:0;background:transparent;color:var(--muted);cursor:pointer;min-height:36px;padding:0 .6rem;border-radius:999px}
+.addp{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.hint{margin:6px 0 10px;color:var(--muted);font-size:.92rem}
 .favchips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .fchip{font:inherit;font-size:.9rem;font-weight:700;border-radius:999px;padding:.3rem .5rem .3rem .8rem;min-height:36px;border:1.5px solid var(--bulb);background:#4b2a86;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:.5rem}
 .fchip span{font-size:1.1rem;line-height:1;color:var(--bulb)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .search{flex:1 1 180px;min-width:0;font:inherit;padding:.6rem .8rem;border-radius:10px;border:1.5px solid var(--line);background:#1d1038;color:var(--ink);min-height:44px}
 .search::placeholder{color:#8f81b6}
+.sharebox{margin-top:10px}
+.sharebox .search{width:100%;margin-top:6px}
 .picker-title{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
 .picker{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;max-height:520px;overflow:auto;padding:2px;overscroll-behavior:contain}
 .tile{font:inherit;text-align:left;color:var(--ink);background:var(--tile);border:1.5px solid transparent;border-radius:10px;padding:.5rem;cursor:pointer;display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0}
@@ -115,26 +141,31 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
 .item .t{font-weight:700;overflow-wrap:anywhere}
 .item .m{grid-column:1;color:var(--muted);font-size:.84rem}
 .item .tag{grid-column:2;grid-row:1 / span 2;font-size:.76rem;font-weight:800;padding:.15rem .55rem;border-radius:999px;background:var(--c);color:var(--fg);white-space:nowrap}
-.hist{margin-top:26px}
+.hist{margin-top:22px}
 .hist summary{cursor:pointer;font-weight:800;margin-bottom:8px}
 .restart{margin-top:14px}
 .foot{margin:30px 0 0;color:var(--muted);font-size:.85rem;max-width:72ch}
+.foot .btn{margin-top:12px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<canvas id="confetti" aria-hidden="true"></canvas>
 <div class="wrap">
   <header class="top">
     <h1>Movie Night Wheel</h1>
-    <p>Add the shows and films you have all enjoyed, then spin for tonight's watch. Every spin draws a fresh wheel of titles you have not seen come up yet, in any language, with live listings for Australia sorted Netflix first, then free, paid, and rent or buy.</p>
+    <p>Add what each person enjoys, tick who is watching tonight, then spin. Every spin draws a fresh wheel of titles you have not seen come up yet, in any language, with live listings for Australia sorted Netflix first, then free, paid, and rent or buy.</p>
   </header>
+
+  <div id="importBar"></div>
 
   <div class="main">
     <div class="stagecol">
       <div class="wheel-box"><canvas id="wheel" role="img" aria-label="Wheel of suggested titles. Activate to spin."></canvas></div>
       <div class="spin-row">
         <button class="btn primary" id="spin" type="button" disabled>Spin</button>
+        <button class="btn small" id="mute" type="button">Sound on</button>
       </div>
       <p class="status" id="status" aria-live="polite">Loading suggestions…</p>
       <div class="win" id="winner" aria-live="polite"></div>
@@ -149,6 +180,12 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
           <button type="button" data-type="movie" aria-pressed="false">Movies</button>
           <button type="button" data-type="show" aria-pressed="false">Series</button>
         </div>
+        <div class="label">Length (per episode for series)</div>
+        <div class="seg" id="lenSeg" role="group" aria-label="Length">
+          <button type="button" data-len="0" aria-pressed="true">Any</button>
+          <button type="button" data-len="100" aria-pressed="false">Up to 100 min</button>
+          <button type="button" data-len="120" aria-pressed="false">Up to 2 hours</button>
+        </div>
         <div class="label">Genre (pick any)</div>
         <div class="row" id="genreChips"></div>
         <div class="label">Original language (pick any)</div>
@@ -158,15 +195,25 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
       </section>
 
       <section aria-labelledby="h-fav">
-        <h2 id="h-fav">Things you have enjoyed</h2>
+        <h2 id="h-fav">Who is watching, and what do they enjoy?</h2>
+        <div class="people" id="people"></div>
+        <form class="addp" id="addPersonForm" autocomplete="off">
+          <input class="search" id="newPerson" maxlength="20" placeholder="Add a person" aria-label="Add a person">
+          <button class="btn small" type="submit">Add</button>
+        </form>
         <p class="hint" id="hint"></p>
+        <div class="label" id="favLabel" style="margin-top:6px">Your favourites</div>
         <div class="favchips" id="favChips"></div>
         <div class="toolbar">
           <input class="search" id="q" type="search" placeholder="Search any show or film" aria-label="Search any show or film" autocomplete="off">
-          <button class="btn" id="clearFav" type="button">Clear all</button>
+          <button class="btn small" id="clearFav" type="button">Clear</button>
         </div>
         <p class="picker-title" id="pickerTitle"></p>
         <div class="picker" id="picker"></div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn small" id="shareBtn" type="button">Share favourites</button>
+        </div>
+        <div class="sharebox" id="shareOut"></div>
       </section>
     </div>
   </div>
@@ -174,10 +221,11 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
   <section class="results" aria-labelledby="h-res">
     <h2 id="h-res">Still to come up</h2>
     <div class="cols" id="cols"></div>
-    <div id="history"></div>
+    <div id="shelves"></div>
   </section>
 
-  <p class="foot">This product uses the TMDB API but is not endorsed or certified by TMDB. Streaming availability data comes from JustWatch via TMDB and can lag behind what services actually carry, so use "See all options" to double-check a pick. Titles in other languages are included; check for subtitles or dubbing on the platform.</p>
+  <p class="foot">This product uses the TMDB API but is not endorsed or certified by TMDB. Streaming availability data comes from JustWatch via TMDB and can lag behind what services actually carry, so use "See all options" to double-check a pick. Titles in other languages are included; check for subtitles or dubbing on the platform. On a phone, use your browser's Add to Home Screen to keep this like an app.
+    <br><button class="btn small" id="install" type="button" hidden>Install app</button></p>
 </div>
 
 <script>
@@ -187,6 +235,8 @@ var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 var reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 var IMG='https://image.tmdb.org/t/p/';
+var key=function(it){return it.k+':'+it.id};
+var tmdbKind=function(it){return it.k==='show'?'tv':'movie'};
 
 /* ---------- platforms ---------- */
 var PLAT={
@@ -243,16 +293,29 @@ var dn=null;try{dn=new Intl.DisplayNames(['en'],{type:'language'})}catch(e){}
 function langName(c){try{return (dn&&dn.of(c))||c}catch(e){return c}}
 
 /* ---------- state ---------- */
-var KEY='movie-night-wheel-v2',PKEY='movie-night-wheel-providers-v2',SKEY='movie-night-wheel-seen-v1';
+var KEY='movie-night-wheel-v2',PKEY='movie-night-wheel-providers-v3',SKEY='movie-night-wheel-seen-v1';
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function ssGet(k){try{return JSON.parse(sessionStorage.getItem(k))}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function newId(){return 'p'+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36)}
 var saved=lsGet(KEY)||{};
-var state={fav:Array.isArray(saved.fav)?saved.fav:[],off:saved.off||[],genres:saved.genres||[],langs:saved.langs||[],type:saved.type||'any'};
+/* Older saves had one flat list of favourites; it becomes the first person's list. */
+var state={
+  people:(Array.isArray(saved.people)&&saved.people.length)?saved.people:[{id:'p1',name:'Us',fav:Array.isArray(saved.fav)?saved.fav:[],here:true}],
+  editing:saved.editing||'',
+  off:saved.off||[],genres:saved.genres||[],langs:saved.langs||[],type:saved.type||'any',
+  maxLen:saved.maxLen||0,hidden:saved.hidden||{},later:Array.isArray(saved.later)?saved.later:[],muted:!!saved.muted
+};
+state.people.forEach(function(p){p.fav=Array.isArray(p.fav)?p.fav:[];p.here=p.here!==false;p.name=String(p.name||'Friend').slice(0,20);p.id=p.id||newId()});
+if(!state.people.some(function(p){return p.id===state.editing}))state.editing=state.people[0].id;
 function save(){lsSet(KEY,state)}
-var key=function(it){return it.k+':'+it.id};
-var tmdbKind=function(it){return it.k==='show'?'tv':'movie'};
+function person(id){for(var i=0;i<state.people.length;i++){if(state.people[i].id===id)return state.people[i]}return null}
+function editor(){return person(state.editing)||state.people[0]}
+function herePeople(){return state.people.filter(function(p){return p.here})}
+function allFavKeys(){var s=new Set();state.people.forEach(function(p){p.fav.forEach(function(f){s.add(key(f))})});return s}
+function favPos(p,it){for(var i=0;i<p.fav.length;i++){if(key(p.fav[i])===key(it))return i}return -1}
+function laterHas(k){return state.later.some(function(c){return key(c.d)===k})}
 
 var provCache=lsGet(PKEY)||{};
 var PROV_TTL=12*3600*1000;
@@ -261,7 +324,7 @@ function saveProv(){
   if(ks.length>600){ks.sort(function(a,b){return provCache[a].t-provCache[b].t}).slice(0,ks.length-450).forEach(function(k){delete provCache[k]})}
   lsSet(PKEY,provCache);
 }
-function provFresh(it){var e=provCache[key(it)];return !!e&&Date.now()-e.t<=PROV_TTL}
+function provFresh(it){var e=provCache[key(it)];return !!e&&e.v===3&&Date.now()-e.t<=PROV_TTL}
 
 /* Titles that have already been on a wheel tonight (kept for this browser tab's session). */
 var seen=new Map(),winners=new Set();
@@ -273,11 +336,13 @@ var seen=new Map(),winners=new Set();
   }
 })();
 function saveSeen(){ssSet(SKEY,{list:Array.from(seen.values()),winners:Array.from(winners)})}
+function blocked(k,favs){return favs.has(k)||seen.has(k)||!!state.hidden[k]||laterHas(k)}
 
 var poolMap=new Map();
 var current=null,items=[],cands=[],pickItems=[],trending=[];
 var locked=false,loading=true,topping=false,poolDry=false,emptyStreak=0,extraPage=2;
-var apiError='',buildSeq=0,rbTimer=null,provDone=0,provTotal=0,histOpen=false;
+var apiError='',buildSeq=0,rbTimer=null,provDone=0,provTotal=0,rmConfirm=null;
+var open={later:false,hist:false,hidden:false};
 
 /* ---------- TMDB access through the Netlify function ---------- */
 var memo=new Map();
@@ -324,16 +389,17 @@ function langOk(it){
   if(state.langs.indexOf(it.l)>=0)return true;
   return it.l==='cn'&&state.langs.indexOf('zh')>=0;
 }
-function favIdx(it){for(var i=0;i<state.fav.length;i++){if(key(state.fav[i])===key(it))return i}return -1}
+function lenOk(rt){return !state.maxLen||!rt||rt<=state.maxLen}
 
 /* ---------- building the pool of suggestions ---------- */
 function makeAdd(m){
-  return function(raw,hint,score,rel){
+  return function(raw,hint,score,rel,pid){
     var it=norm(raw,hint);if(!it||it.vc<60)return;
     var k=key(it),c=m.get(k);
-    if(!c){c={it:it,score:0,rel:[]};m.set(k,c)}
+    if(!c){c={it:it,score:0,rel:[],people:[]};m.set(k,c)}
     c.score+=score;
     if(rel&&c.rel.indexOf(rel)<0)c.rel.push(rel);
+    if(pid&&c.people.indexOf(pid)<0)c.people.push(pid);
   };
 }
 function discoverJobs(add,pages){
@@ -345,6 +411,7 @@ function discoverJobs(add,pages){
     pages.forEach(function(page){
       var base={watch_region:'AU','with_watch_monetization_types':'flatrate|free|ads|rent|buy',sort_by:'popularity.desc','vote_count.gte':300,'vote_average.gte':6.5,include_adult:'false',page:page};
       if(ids.length)base.with_genres=ids.join('|');
+      if(state.maxLen&&kind==='movie')base['with_runtime.lte']=state.maxLen;
       function go(extra,score){
         jobs.push(api('discover/'+kind,Object.assign({},base,extra)).then(function(r){(r.results||[]).forEach(function(raw){add(raw,kind,score,null)})}).catch(noteErr));
       }
@@ -365,14 +432,18 @@ function rebuild(){
   var seq=++buildSeq;
   loading=true;apiError='';provDone=0;provTotal=0;locked=false;items=[];extraPage=2;poolDry=false;emptyStreak=0;
   setStatus();refresh();
+  var here=herePeople(),multi=here.length>1,anyFav=here.some(function(p){return p.fav.length});
   var m=new Map(),add=makeAdd(m),jobs=[];
-  state.fav.forEach(function(f){
-    jobs.push(api(tmdbKind(f)+'/'+f.id+'/recommendations').then(function(r){
-      (r.results||[]).slice(0,20).forEach(function(raw,i){add(raw,tmdbKind(f),1-i*0.02,f.t)});
-    }).catch(noteErr));
+  here.forEach(function(p){
+    p.fav.forEach(function(f){
+      var label=f.t+(multi?' ('+p.name+')':'');
+      jobs.push(api(tmdbKind(f)+'/'+f.id+'/recommendations').then(function(r){
+        (r.results||[]).slice(0,20).forEach(function(raw,i){add(raw,tmdbKind(f),1-i*0.02,label,p.id)});
+      }).catch(noteErr));
+    });
   });
   discoverJobs(add,[1,2]).forEach(function(j){jobs.push(j)});
-  if(!state.fav.length){
+  if(!anyFav){
     jobs.push(api('trending/all/week').then(function(r){(r.results||[]).forEach(function(raw){add(raw,null,0.5,null)})}).catch(noteErr));
   }
   return Promise.all(jobs).then(function(){
@@ -384,6 +455,7 @@ function rebuild(){
     loading=false;
     cands=compute();drawFresh();
     refresh();
+    ensureSupply();
   });
 }
 
@@ -396,21 +468,38 @@ function parseProv(res){
   if(rb.length)keys.push('rentbuy');
   return {keys:keys,link:au.link||'',rb:rb};
 }
+function runtimeOf(r,kind){
+  if(!r)return 0;
+  if(kind==='movie')return r.runtime||0;
+  var e=r.episode_run_time&&r.episode_run_time[0];
+  return e||(r.last_episode_to_air&&r.last_episode_to_air.runtime)||0;
+}
 function eligibleRanked(){
+  var favs=allFavKeys();
   return Array.from(poolMap.values()).filter(function(c){
-    return favIdx(c.it)<0&&!seen.has(key(c.it))&&typeOk(c.it)&&genreOk(c.it)&&langOk(c.it);
+    return !blocked(key(c.it),favs)&&typeOk(c.it)&&genreOk(c.it)&&langOk(c.it);
   }).sort(function(a,b){return b.score-a.score});
 }
-function fetchProviders(list,seq){
+/* One call per title returns its runtime and its Australian watch options together. */
+function fetchDetails(list,seq){
   provTotal=list.length;provDone=0;
   if(!list.length)return Promise.resolve();
   var i=0;
+  function one(c){
+    var kind=tmdbKind(c.it),base=kind+'/'+c.it.id;
+    return api(base,{append_to_response:'watch/providers'}).then(function(r){
+      r=r||{};
+      if(r['watch/providers']!==undefined)return r;
+      return api(base+'/watch/providers').then(function(pr){r['watch/providers']=pr;return r});
+    }).then(function(r){
+      var p=parseProv(r['watch/providers']);
+      provCache[key(c.it)]={v:3,t:Date.now(),keys:p.keys,link:p.link,rb:p.rb,rt:runtimeOf(r,kind),sn:r.number_of_seasons||0};
+    });
+  }
   function worker(){
     if(i>=list.length||seq!==buildSeq)return Promise.resolve();
     var c=list[i++];
-    return api(tmdbKind(c.it)+'/'+c.it.id+'/watch/providers').then(function(r){
-      var p=parseProv(r);provCache[key(c.it)]={t:Date.now(),keys:p.keys,link:p.link,rb:p.rb};
-    }).catch(noteErr).then(function(){
+    return one(c).catch(noteErr).then(function(){
       provDone++;
       if(seq===buildSeq&&provDone%8===0){setStatus();refresh()}
       return worker();
@@ -421,7 +510,7 @@ function fetchProviders(list,seq){
 }
 function loadProviders(seq){
   var todo=eligibleRanked().slice(0,48).filter(function(c){return !provFresh(c.it)});
-  return fetchProviders(todo,seq);
+  return fetchDetails(todo,seq);
 }
 /* Keeps the supply of unseen titles topped up so every spin can have a brand new wheel. */
 function ensureSupply(){
@@ -430,30 +519,33 @@ function ensureSupply(){
   if(!need.length&&poolDry)return Promise.resolve();
   topping=true;setStatus();
   var seq=buildSeq,p;
-  if(need.length){p=fetchProviders(need,seq)}
+  if(need.length){p=fetchDetails(need,seq)}
   else{
     extraPage++;var before=poolMap.size;
     p=Promise.all(discoverJobs(makeAdd(poolMap),[extraPage])).then(function(){
       if(poolMap.size===before)emptyStreak++;else emptyStreak=0;
       if(emptyStreak>=2||extraPage>=10)poolDry=true;
       var more=eligibleRanked().filter(function(c){return !provFresh(c.it)}).slice(0,24);
-      return fetchProviders(more,seq);
+      return fetchDetails(more,seq);
     });
   }
   return p.catch(noteErr).then(function(){topping=false;if(seq===buildSeq)refresh()});
 }
 
 function compute(){
-  var out=[];
+  var out=[],favs=allFavKeys(),multi=herePeople().length>1;
   poolMap.forEach(function(c){
     var it=c.it,k=key(it);
-    if(favIdx(it)>=0||seen.has(k))return;
+    if(blocked(k,favs))return;
     if(!typeOk(it)||!genreOk(it)||!langOk(it))return;
     var pv=provCache[k];if(!pv)return;
+    if(!lenOk(pv.rt))return;
     var pl=pv.keys.filter(function(p){return PLAT[p]&&state.off.indexOf(p)<0});
     if(!pl.length)return;
     pl.sort(function(a,b){return PLAT[a].t-PLAT[b].t||PORDER.indexOf(a)-PORDER.indexOf(b)});
-    out.push({d:it,pl:pl,main:pl[0],tier:PLAT[pl[0]].t,score:c.score+0.04*(it.v||0),why:c.rel.slice(0,2),link:pv.link,rb:pv.rb||[]});
+    /* A title that several people's favourites point to is a better bet for a shared evening. */
+    var bonus=multi&&c.people.length>1?0.6*(c.people.length-1):0;
+    out.push({d:it,pl:pl,main:pl[0],tier:PLAT[pl[0]].t,score:c.score+0.04*(it.v||0)+bonus,why:c.rel.slice(0,2),link:pv.link,rb:pv.rb||[],rt:pv.rt||0,sn:pv.sn||0});
   });
   return out;
 }
@@ -463,6 +555,57 @@ function drawFresh(){
   for(var i=ranked.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=ranked[i];ranked[i]=ranked[j];ranked[j]=t}
   items=ranked.slice(0,8).sort(byTier);
   locked=false;
+}
+function snapshot(c){return {d:c.d,pl:c.pl,main:c.main,tier:c.tier,score:c.score,why:c.why,link:c.link,rb:c.rb,rt:c.rt,sn:c.sn}}
+
+/* ---------- sound and confetti ---------- */
+var actx=null,lastTick=0;
+function audio(){
+  if(state.muted)return null;
+  if(!actx){try{var AC=window.AudioContext||window.webkitAudioContext;if(AC)actx=new AC()}catch(e){}}
+  if(actx&&actx.state==='suspended'&&actx.resume){try{actx.resume()}catch(e){}}
+  return actx;
+}
+function tone(freq,t0,dur,type,vol){
+  var a=audio();if(!a)return;
+  try{
+    var o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;
+    o.type=type||'triangle';o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.02);
+  }catch(e){}
+}
+function tick(){var now=performance.now();if(now-lastTick<45)return;lastTick=now;tone(1500,0,0.04,'square',0.035)}
+function fanfare(){
+  [523.25,659.25,783.99,1046.5].forEach(function(f,i){tone(f,i*0.11,0.28,'triangle',0.12)});
+  tone(1046.5,0.5,0.6,'sine',0.1);
+}
+var cf=$('#confetti'),cfx=cf.getContext('2d'),parts=[],cfRun=false;
+function confetti(){
+  if(reduce||!cfx)return;
+  var w=cf.width=window.innerWidth,h=cf.height=window.innerHeight;
+  var cols=['#ffc93c','#e50914','#2fb36d','#0fa5d9','#a14cf0','#ff3d6e','#fff4de'];
+  parts=[];
+  for(var i=0;i<140;i++)parts.push({x:w/2+(Math.random()-0.5)*w*0.3,y:h*0.35,vx:(Math.random()-0.5)*14,vy:-Math.random()*13-3,s:5+Math.random()*6,r:Math.random()*6,vr:(Math.random()-0.5)*0.4,c:cols[i%cols.length],life:0});
+  if(cfRun)return;
+  cfRun=true;
+  (function frame(){
+    cfx.clearRect(0,0,w,h);
+    var alive=0;
+    parts.forEach(function(p){
+      p.vy+=0.38;p.vx*=0.992;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.life++;
+      if(p.y<h+20&&p.life<200){
+        alive++;cfx.save();cfx.translate(p.x,p.y);cfx.rotate(p.r);cfx.fillStyle=p.c;cfx.fillRect(-p.s/2,-p.s/3,p.s,p.s*0.6);cfx.restore();
+      }
+    });
+    if(alive)requestAnimationFrame(frame);else{cfx.clearRect(0,0,w,h);cfRun=false}
+  })();
+}
+function renderMute(){
+  var b=$('#mute');b.textContent=state.muted?'Sound off':'Sound on';
+  b.setAttribute('aria-pressed',String(!state.muted));
 }
 
 /* ---------- wheel ---------- */
@@ -475,11 +618,6 @@ function fit(){
   if(cv.width!==S){cv.width=S;cv.height=S}
   draw();
 }
-function clip(txt,max){
-  if(ctx.measureText(txt).width<=max)return txt;
-  while(txt.length>1&&ctx.measureText(txt+'…').width>max)txt=txt.slice(0,-1);
-  return txt.replace(/\s+$/,'')+'…';
-}
 /* Titles wrap onto up to three lines and shrink a little if needed; only a title too long even then gets an ellipsis. */
 function wrapLines(txt,maxW){
   var words=txt.split(/\s+/).filter(Boolean),lines=[],line='';
@@ -488,7 +626,6 @@ function wrapLines(txt,maxW){
     if(ctx.measureText(test).width<=maxW){line=test;return}
     if(line){lines.push(line);line=''}
     if(ctx.measureText(w).width<=maxW){line=w;return}
-    /* a very long word, or a script written without spaces: break it by character */
     var chunk='';
     Array.from(w).forEach(function(ch){
       if(ctx.measureText(chunk+ch).width<=maxW){chunk+=ch}else{if(chunk)lines.push(chunk);chunk=ch}
@@ -579,6 +716,7 @@ function abortSpin(){spinToken++;spinning=false}
 function canSpin(){return !spinning&&!loading&&!topping&&items.length>0}
 function spin(){
   if(spinning||loading||topping)return;
+  audio();
   if(locked){
     /* This wheel has been spun: top up the supply if it is running low, then deal a brand new wheel. */
     if(cands.length<8&&!poolDry){ensureSupply().then(function(){spin()});return}
@@ -591,20 +729,23 @@ function spin(){
   items.forEach(function(c){seen.set(key(c.d),c)});
   saveSeen();
   cands=compute();
-  setButtons();renderResults();renderHistory();setStatus();
+  setButtons();renderResults();renderShelves();setStatus();
   var n=items.length,a=TAU/n,w=Math.floor(Math.random()*n);
   var theta=w*a+a*(0.15+Math.random()*0.7);
-  var start=rot;
+  var start=rot,lastIdx=-1;
   var delta=(((-theta-start)%TAU)+TAU)%TAU+(reduce?TAU:(5+Math.floor(Math.random()*3))*TAU);
   var dur=reduce?1400:5200,t0=performance.now();
   function step(now){
     if(tok!==spinToken){setButtons();return}
     var p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,4);
     rot=start+delta*e;phase=Math.floor(now/90)%2;draw();
+    var idx=Math.floor((((-rot)%TAU)+TAU)%TAU/a)%n;
+    if(idx!==lastIdx){lastIdx=idx;tick()}
     if(p<1)requestAnimationFrame(step);
     else{
       rot=rot%TAU;spinning=false;current=wheel[w];winners.add(key(current.d));saveSeen();
-      setButtons();setStatus();renderWinner();renderHistory();
+      setButtons();setStatus();renderWinner();renderShelves();
+      fanfare();confetti();
       ensureSupply();
     }
   }
@@ -638,13 +779,22 @@ function setStatus(){
 function posterImg(it,size,cls){
   return it.p?'<img class="'+cls+'" src="'+IMG+size+it.p+'" alt="" loading="lazy">':'<div class="'+cls+'"></div>';
 }
-function tagHtml(id){return '<span class="tag" style="'+pstyle(id)+'">'+esc(PLAT[id].n)+'</span>'}
+function tagHtml(id){return PLAT[id]?'<span class="tag" style="'+pstyle(id)+'">'+esc(PLAT[id].n)+'</span>':''}
 function kindLabel(it){return it.k==='movie'?'Movie':'Series'}
 function metaLine(it,ng){
   var bits=[it.y,kindLabel(it)];
   var g=gnames(it,ng);if(g)bits.push(g);
   if(it.l&&it.l!=='en')bits.push(langName(it.l));
   return bits.filter(Boolean).map(esc).join(' · ');
+}
+function lengthText(c){
+  var rt=c.rt||0,out=[];
+  if(rt){
+    if(c.d.k==='movie')out.push(rt>=60?Math.floor(rt/60)+'h '+('0'+(rt%60)).slice(-2)+'m':rt+' min');
+    else out.push(rt+' min episodes');
+  }
+  if(c.d.k==='show'&&c.sn)out.push(c.sn+' season'+(c.sn>1?'s':''));
+  return out.join(' · ');
 }
 
 function renderWinner(){
@@ -653,25 +803,39 @@ function renderWinner(){
     el.innerHTML='<p class="eyebrow">Tonight\'s pick</p><p class="muted" style="margin:0">Spin the wheel, or tap any title in the lists below, to see where to watch it.</p>';
     return;
   }
-  var d=current.d,pl=current.pl,main=pl[0],also='';
-  if(main==='rentbuy'){also=current.rb.length?'Via '+current.rb.slice(0,4).join(', '):''}
+  var d=current.d,pl=current.pl||[],main=current.main||pl[0],also='',k=key(d);
+  if(main==='rentbuy'){also=(current.rb&&current.rb.length)?'Via '+current.rb.slice(0,4).join(', '):''}
   else{also=pl.slice(1).map(function(p){return PLAT[p].n}).join(', ');if(also)also='Also on '+also}
-  var why=current.why.length?'Because you liked '+current.why.map(esc).join(' and ')+'.':'Popular on '+esc(PLAT[main].n)+' right now.';
+  var why=(current.why&&current.why.length)?'Because you liked '+current.why.map(esc).join(' and ')+'.':(main?'Popular on '+esc(PLAT[main].n)+' right now.':'');
   var link=current.link||('https://www.justwatch.com/au/search?q='+encodeURIComponent(d.t));
+  var facts=[];
+  if(d.v>0)facts.push('★ '+d.v.toFixed(1));
+  var len=lengthText(current);if(len)facts.push(len);
+  var hid=!!state.hidden[k],ed=editor(),multi=state.people.length>1;
+  var sec='';
+  if(hid){sec='<button class="btn small" data-act="unhide" type="button">Bring back</button>'}
+  else{
+    sec='<button class="btn small" data-act="seen" type="button">Seen it</button>'+
+      '<button class="btn small" data-act="nope" type="button">Not for us</button>'+
+      (laterHas(k)?'<button class="btn small" data-act="unlater" type="button">Remove from saved</button>':'<button class="btn small" data-act="later" type="button">Save for later</button>')+
+      (favPos(ed,d)<0?'<button class="btn small" data-act="fav" type="button">Add to '+(multi?esc(ed.name)+'\'s ':'')+'favourites</button>':'');
+  }
   el.innerHTML=
     '<p class="eyebrow">Tonight\'s pick</p>'+
     '<div class="winflex">'+posterImg(d,'w185','poster')+
-      '<div class="wintext"><h3>'+esc(d.t)+'</h3><p class="meta">'+metaLine(d,3)+'</p></div></div>'+
+      '<div class="wintext"><h3>'+esc(d.t)+'</h3><p class="meta">'+metaLine(d,3)+'</p>'+(facts.length?'<p class="meta">'+esc(facts.join(' · '))+'</p>':'')+'</div></div>'+
     (d.d?'<p class="blurb">'+esc(d.d)+'</p>':'')+
-    '<div class="watch"><span class="big" style="'+pstyle(main)+'">'+(main==='rentbuy'?'Rent or buy':'Watch on '+esc(PLAT[main].n))+'</span>'+(also?'<span class="also">'+esc(also)+'</span>':'')+'</div>'+
-    '<p class="why">'+why+'</p>'+
+    (main?'<div class="watch"><span class="big" style="'+pstyle(main)+'">'+(main==='rentbuy'?'Rent or buy':'Watch on '+esc(PLAT[main].n))+'</span>'+(also?'<span class="also">'+esc(also)+'</span>':'')+'</div>':'')+
+    (why?'<p class="why">'+why+'</p>':'')+
     '<div class="actions"><button class="btn" data-act="again" type="button">Spin again</button>'+
-    '<a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="'+esc(link)+'" target="_blank" rel="noopener">See all options</a></div>';
+    '<a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="'+esc(link)+'" target="_blank" rel="noopener">See all options</a></div>'+
+    '<div class="sec-actions">'+sec+'</div>'+
+    (current.note?'<p class="note" role="status">'+esc(current.note)+'</p>':'');
 }
 
 function rowHtml(c,extra){
   return '<button class="item" type="button" data-key="'+esc(key(c.d))+'"><span class="t">'+esc(c.d.t)+'</span>'+
-    '<span class="m">'+metaLine(c.d,2)+(extra||'')+'</span>'+tagHtml(c.main)+'</button>';
+    '<span class="m">'+metaLine(c.d,2)+(extra||'')+'</span>'+(c.main?tagHtml(c.main):'')+'</button>';
 }
 function renderResults(){
   var ranked=cands.slice().sort(function(a,b){return b.score-a.score});
@@ -685,13 +849,18 @@ function renderResults(){
   });
   $('#cols').innerHTML=html;
 }
-function renderHistory(){
-  var el=$('#history');
-  if(!seen.size){el.innerHTML='';return}
-  var arr=Array.from(seen.values()).reverse();
-  el.innerHTML='<details class="hist"'+(histOpen?' open':'')+'><summary>Already suggested tonight ('+arr.length+')</summary>'+
-    arr.map(function(c){return rowHtml(c,winners.has(key(c.d))?' · landed':'')}).join('')+'</details>'+
-    '<div class="restart"><button class="btn" id="restart" type="button">Start over</button></div>';
+function shelf(id,title,arr,rowFn,after){
+  if(!arr.length)return '';
+  return '<details class="hist" data-shelf="'+id+'"'+(open[id]?' open':'')+'><summary>'+title+' ('+arr.length+')</summary>'+arr.map(rowFn).join('')+'</details>'+(after||'');
+}
+function renderShelves(){
+  var later=state.later.slice().reverse();
+  var hid=Object.keys(state.hidden).map(function(k){return state.hidden[k]});
+  var hist=Array.from(seen.values()).reverse();
+  $('#shelves').innerHTML=
+    shelf('later','Saved for another night',later,function(c){return rowHtml(c)})+
+    shelf('hist','Already suggested tonight',hist,function(c){return rowHtml(c,winners.has(key(c.d))?' · landed':'')},'<div class="restart"><button class="btn" id="restart" type="button">Start over</button></div>')+
+    shelf('hidden','Seen it or not for us',hid,function(c){return rowHtml(c,c.hid==='seen'?' · seen':' · not for us')});
 }
 
 function refresh(){
@@ -704,7 +873,7 @@ function refresh(){
     }
   }
   setWheelLabel();
-  setButtons();setStatus();renderResults();renderWinner();renderHistory();draw();
+  setButtons();setStatus();renderResults();renderWinner();renderShelves();draw();
 }
 function setWheelLabel(){
   cv.setAttribute('aria-label',items.length?'Wheel with '+items.map(function(i){return i.d.t}).join(' | ')+'. Activate to spin.':'Wheel has no matches yet.');
@@ -724,19 +893,39 @@ function renderChips(){
   });
   $('#platChips').innerHTML=html;
   Array.prototype.forEach.call(document.querySelectorAll('#typeSeg button'),function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-type')===state.type))});
+  Array.prototype.forEach.call(document.querySelectorAll('#lenSeg button'),function(b){b.setAttribute('aria-pressed',String(+b.getAttribute('data-len')===state.maxLen))});
+}
+function renderPeople(){
+  var multi=state.people.length>1;
+  $('#people').innerHTML=state.people.map(function(p){
+    var ed=p.id===state.editing;
+    return '<span class="pchip" data-pid="'+esc(p.id)+'" data-editing="'+ed+'">'+
+      '<button class="pname" type="button" data-act="edit" aria-pressed="'+ed+'" title="Show and edit '+esc(p.name)+'\'s favourites">'+esc(p.name)+'<small>'+p.fav.length+'</small></button>'+
+      '<label class="here"><input type="checkbox" data-act="here" aria-label="'+esc(p.name)+' is watching tonight"'+(p.here?' checked':'')+'> here</label>'+
+      (multi?'<button class="prm" type="button" data-act="rm" aria-label="Remove '+esc(p.name)+'">'+(rmConfirm===p.id?'Sure?':'×')+'</button>':'')+
+      '</span>';
+  }).join('');
 }
 function renderFavs(){
-  var n=state.fav.length;
-  $('#hint').textContent=n?'Suggestions are based on these. Add more for closer matches.':'Search for a few shows or films you have all enjoyed. Until then the wheel shows what is popular in Australia.';
-  $('#favChips').innerHTML=state.fav.map(function(f){return '<button class="fchip" type="button" data-key="'+esc(key(f))+'" aria-label="Remove '+esc(f.t)+'">'+esc(f.t)+' <span aria-hidden="true">×</span></button>'}).join('');
-  $('#clearFav').disabled=!n;
+  var p=editor(),multi=state.people.length>1,here=herePeople();
+  $('#favLabel').textContent=multi?p.name+'\'s favourites':'Your favourites';
+  var total=here.reduce(function(n,x){return n+x.fav.length},0);
+  var hint;
+  if(!here.length)hint='Tick "here" on at least one person to base suggestions on their favourites. Until then the wheel shows what is popular in Australia.';
+  else if(!total)hint='Search for a few shows or films each person enjoys. Until then the wheel shows what is popular in Australia.';
+  else if(here.length>1)hint='Suggestions use the favourites of everyone marked "here". Titles that several people\'s favourites point to score higher.';
+  else hint='Suggestions are based on these. Add more for closer matches.';
+  $('#hint').textContent=hint;
+  $('#favChips').innerHTML=p.fav.map(function(f){return '<button class="fchip" type="button" data-key="'+esc(key(f))+'" aria-label="Remove '+esc(f.t)+'">'+esc(f.t)+' <span aria-hidden="true">×</span></button>'}).join('');
+  $('#clearFav').disabled=!p.fav.length;
+  $('#clearFav').textContent=multi?'Clear '+p.name:'Clear';
 }
 function renderPicker(){
-  var q=$('#q').value.trim();
+  var q=$('#q').value.trim(),ed=editor();
   $('#pickerTitle').textContent=q?'Search results':'Trending this week';
   if(!pickItems.length){$('#picker').innerHTML='<div class="empty">'+(q?'No titles found.':'Loading…')+'</div>';return}
   $('#picker').innerHTML=pickItems.map(function(it){
-    return '<button class="tile" type="button" data-key="'+esc(key(it))+'" aria-pressed="'+(favIdx(it)>=0)+'">'+posterImg(it,'w92','thumb')+
+    return '<button class="tile" type="button" data-key="'+esc(key(it))+'" aria-pressed="'+(favPos(ed,it)>=0)+'">'+posterImg(it,'w92','thumb')+
       '<span class="tt"><b>'+esc(it.t)+'</b><small>'+metaLine(it,1)+'</small></span></button>';
   }).join('');
 }
@@ -761,34 +950,144 @@ function onSearch(){
   },350);
 }
 
+/* ---------- sharing favourites by link ---------- */
+function encodeShare(){
+  var data={v:1,p:state.people.map(function(p){return {n:p.name,f:p.fav.map(function(f){return (f.k==='show'?'t':'m')+f.id})}})};
+  var b=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeShare(code){
+  try{
+    var b=code.replace(/-/g,'+').replace(/_/g,'/');
+    while(b.length%4)b+='=';
+    var d=JSON.parse(decodeURIComponent(escape(atob(b))));
+    if(!d||!Array.isArray(d.p))return null;
+    var out=[];
+    d.p.slice(0,8).forEach(function(p){
+      if(!p||typeof p.n!=='string'||!Array.isArray(p.f))return;
+      var ids=p.f.filter(function(x){return typeof x==='string'&&/^[mt]\d{1,9}$/.test(x)}).slice(0,40);
+      var name=p.n.replace(/[\u0000-\u001f]/g,'').trim().slice(0,20);
+      if(name&&ids.length)out.push({n:name,f:ids});
+    });
+    return out.length?out:null;
+  }catch(e){return null}
+}
+function shareLink(){return location.origin+location.pathname+'#s='+encodeShare()}
+function doShare(){
+  var total=state.people.reduce(function(n,p){return n+p.fav.length},0);
+  var out=$('#shareOut');
+  if(!total){out.innerHTML='<p class="hint">Add a few favourites first, then share them.</p>';return}
+  var link=shareLink();
+  out.innerHTML='<p class="hint" id="shareMsg">Copying the link…</p><input class="search" id="shareLink" readonly value="'+esc(link)+'" aria-label="Share link">'+
+    (navigator.share?'<div class="toolbar" style="margin-top:8px"><button class="btn small" id="shareSend" type="button">Send…</button></div>':'');
+  var msg=$('#shareMsg');
+  function done(ok){msg.textContent=ok?'Link copied. Anyone who opens it can add these favourites to their own list.':'Select the link and copy it. Anyone who opens it can add these favourites to their own list.'}
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(function(){done(true)},function(){done(false)})}
+    else done(false);
+  }catch(e){done(false)}
+}
+var pendingImport=null;
+function renderImportBar(){
+  var el=$('#importBar');
+  if(!pendingImport){el.innerHTML='';return}
+  var txt=pendingImport.map(function(p){return esc(p.n)+' ('+p.f.length+')'}).join(', ');
+  el.innerHTML='<div class="banner"><p>Someone shared favourites with you: '+txt+'. Add them to your list?</p>'+
+    '<div class="acts"><button class="btn small" id="impYes" type="button">Add them</button><button class="btn small" id="impNo" type="button">No thanks</button></div></div>';
+}
+function clearHash(){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
+function runImport(){
+  var data=pendingImport;if(!data)return;
+  $('#importBar').innerHTML='<div class="banner"><p>Adding favourites…</p></div>';
+  var ids=[];data.forEach(function(p){p.f.forEach(function(x){if(ids.indexOf(x)<0)ids.push(x)})});
+  var minis={};
+  var jobs=ids.map(function(x){
+    var kind=x.charAt(0)==='t'?'tv':'movie';
+    return api(kind+'/'+x.slice(1)).then(function(r){var it=norm(r,kind);if(it)minis[x]=mini(it)}).catch(function(){});
+  });
+  Promise.all(jobs).then(function(){
+    data.forEach(function(sp){
+      var target=null;
+      state.people.forEach(function(p){if(p.name.toLowerCase()===sp.n.toLowerCase())target=p});
+      if(!target){target={id:newId(),name:sp.n,fav:[],here:true};state.people.push(target)}
+      sp.f.forEach(function(x){
+        var m=minis[x];if(!m)return;
+        if(favPos(target,m)<0)target.fav.push(m);
+      });
+    });
+    save();pendingImport=null;clearHash();renderImportBar();
+    renderPeople();renderFavs();renderPicker();
+    current=null;scheduleRebuild();refresh();
+  });
+}
+
 /* ---------- events ---------- */
 function scheduleRebuild(){abortSpin();clearTimeout(rbTimer);loading=true;locked=false;items=[];setButtons();rbTimer=setTimeout(rebuild,350)}
 function filtersChanged(){save();renderChips();current=null;scheduleRebuild();refresh()}
-function favsChanged(){save();renderFavs();renderPicker();filtersChanged()}
-function findCand(k){var m=null;cands.forEach(function(c){if(key(c.d)===k)m=c});return m||seen.get(k)||null}
+function favsChanged(){save();renderPeople();renderFavs();renderPicker();current=null;scheduleRebuild();refresh()}
+function findCand(k){
+  var m=null;
+  cands.forEach(function(c){if(key(c.d)===k)m=c});
+  if(m)return m;
+  if(seen.has(k))return seen.get(k);
+  state.later.forEach(function(c){if(key(c.d)===k)m=c});
+  if(m)return m;
+  return state.hidden[k]||null;
+}
 
 $('#spin').addEventListener('click',spin);
 cv.addEventListener('click',spin);
+$('#mute').addEventListener('click',function(){state.muted=!state.muted;save();renderMute();if(!state.muted)audio()});
 $('#q').addEventListener('input',onSearch);
-$('#clearFav').addEventListener('click',function(){state.fav=[];favsChanged()});
+$('#clearFav').addEventListener('click',function(){editor().fav=[];favsChanged()});
 $('#picker').addEventListener('click',function(e){
   var b=e.target.closest('.tile');if(!b)return;
   var k=b.getAttribute('data-key'),it=null;
   pickItems.forEach(function(x){if(key(x)===k)it=x});
   if(!it)return;
-  var i=favIdx(it);
-  if(i>=0)state.fav.splice(i,1);else state.fav.push(mini(it));
+  var ed=editor(),i=favPos(ed,it);
+  if(i>=0)ed.fav.splice(i,1);else ed.fav.push(mini(it));
   favsChanged();
 });
 $('#favChips').addEventListener('click',function(e){
   var b=e.target.closest('.fchip');if(!b)return;
-  var k=b.getAttribute('data-key');
-  state.fav=state.fav.filter(function(f){return key(f)!==k});
+  var k=b.getAttribute('data-key'),ed=editor();
+  ed.fav=ed.fav.filter(function(f){return key(f)!==k});
+  favsChanged();
+});
+$('#people').addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b||b.getAttribute('data-act')==='here')return;
+  var pid=b.closest('.pchip').getAttribute('data-pid'),act=b.getAttribute('data-act');
+  if(act==='edit'){state.editing=pid;save();renderPeople();renderFavs();renderPicker();return}
+  if(act==='rm'){
+    if(rmConfirm!==pid){rmConfirm=pid;renderPeople();setTimeout(function(){if(rmConfirm===pid){rmConfirm=null;renderPeople()}},3000);return}
+    rmConfirm=null;
+    state.people=state.people.filter(function(p){return p.id!==pid});
+    if(!person(state.editing))state.editing=state.people[0].id;
+    favsChanged();
+  }
+});
+$('#people').addEventListener('change',function(e){
+  var cb=e.target;if(!cb.matches||!cb.matches('input[data-act="here"]'))return;
+  var p=person(cb.closest('.pchip').getAttribute('data-pid'));if(!p)return;
+  p.here=cb.checked;
+  save();renderFavs();current=null;scheduleRebuild();refresh();
+});
+$('#addPersonForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var inp=$('#newPerson'),name=inp.value.trim().slice(0,20);
+  if(!name)return;
+  var p={id:newId(),name:name,fav:[],here:true};
+  state.people.push(p);state.editing=p.id;inp.value='';
   favsChanged();
 });
 $('#typeSeg').addEventListener('click',function(e){
   var b=e.target.closest('button');if(!b)return;
   state.type=b.getAttribute('data-type');filtersChanged();
+});
+$('#lenSeg').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  state.maxLen=+b.getAttribute('data-len');filtersChanged();
 });
 $('#genreChips').addEventListener('click',function(e){
   var b=e.target.closest('.chip');if(!b)return;
@@ -816,18 +1115,62 @@ function openFrom(e){
   $('#winner').scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});
 }
 $('#cols').addEventListener('click',openFrom);
-$('#history').addEventListener('click',function(e){
+$('#shelves').addEventListener('click',function(e){
   if(e.target.id==='restart'){restart();return}
   openFrom(e);
 });
-$('#history').addEventListener('toggle',function(e){if(e.target.tagName==='DETAILS')histOpen=e.target.open},true);
+$('#shelves').addEventListener('toggle',function(e){var d=e.target;if(d.tagName==='DETAILS'&&d.getAttribute('data-shelf'))open[d.getAttribute('data-shelf')]=d.open},true);
 $('#winner').addEventListener('click',function(e){
-  var b=e.target.closest('button[data-act]');if(!b)return;
-  if(b.getAttribute('data-act')==='again')spin();
+  var b=e.target.closest('button[data-act]');if(!b||!current)return;
+  var act=b.getAttribute('data-act'),k=key(current.d);
+  if(act==='again'){spin();return}
+  if(act==='seen'||act==='nope'){
+    state.hidden[k]=Object.assign(snapshot(current),{hid:act});
+    current.note=act==='seen'?'Marked as seen. It will not come up again.':'Marked as not for us. It will not come up again.';
+    save();refresh();return;
+  }
+  if(act==='unhide'){delete state.hidden[k];current.note='Brought back. It can come up again.';poolDry=false;save();refresh();return}
+  if(act==='later'){
+    if(!laterHas(k))state.later.push(snapshot(current));
+    current.note='Saved. Find it under "Saved for another night".';save();refresh();return;
+  }
+  if(act==='unlater'){state.later=state.later.filter(function(c){return key(c.d)!==k});current.note='Removed from saved.';poolDry=false;save();refresh();return}
+  if(act==='fav'){
+    var ed=editor();
+    if(favPos(ed,current.d)<0)ed.fav.push(mini(current.d));
+    current.note='Added to favourites. The wheel is refreshing.';
+    save();renderPeople();renderFavs();renderPicker();scheduleRebuild();refresh();
+  }
+});
+$('#shareBtn').addEventListener('click',doShare);
+$('#shareOut').addEventListener('click',function(e){
+  if(e.target.id==='shareLink'){e.target.select();return}
+  if(e.target.id==='shareSend'&&navigator.share){
+    navigator.share({title:'Movie Night Wheel',text:'My favourites for Movie Night Wheel',url:shareLink()}).catch(function(){});
+  }
+});
+$('#importBar').addEventListener('click',function(e){
+  if(e.target.id==='impYes')runImport();
+  if(e.target.id==='impNo'){pendingImport=null;clearHash();renderImportBar()}
 });
 
+/* ---------- install as an app ---------- */
+var installEvt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installEvt=e;$('#install').hidden=false});
+window.addEventListener('appinstalled',function(){installEvt=null;$('#install').hidden=true});
+$('#install').addEventListener('click',function(){
+  if(!installEvt)return;
+  installEvt.prompt();
+  installEvt.userChoice.then(function(){installEvt=null;$('#install').hidden=true}).catch(function(){});
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){try{navigator.serviceWorker.register('/sw.js').catch(function(){})}catch(e){}});
+}
+
 if('ResizeObserver' in window){new ResizeObserver(fit).observe(cv)}else{window.addEventListener('resize',fit)}
-renderChips();renderFavs();renderPicker();renderWinner();renderHistory();
+var hm=(location.hash||'').match(/^#s=([A-Za-z0-9_-]+)$/);
+if(hm){pendingImport=decodeShare(hm[1]);if(!pendingImport)clearHash()}
+renderChips();renderPeople();renderFavs();renderPicker();renderWinner();renderShelves();renderMute();renderImportBar();
 loadTrending();
 rebuild();
 fit();
