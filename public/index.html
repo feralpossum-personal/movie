@@ -121,7 +121,8 @@ canvas#wheel{display:block;width:100%;aspect-ratio:1;cursor:pointer;touch-action
 .sharebox{margin-top:10px}
 .sharebox .search{width:100%;margin-top:6px}
 .picker-title{margin:14px 0 0;font-size:.9rem;color:var(--muted)}
-.picker{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;max-height:520px;overflow:auto;padding:2px;overscroll-behavior:contain}
+.picker{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;max-height:520px;overflow:auto;padding:2px;overscroll-behavior:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:700px){.picker{max-height:none;overflow:visible}}
 .tile{font:inherit;text-align:left;color:var(--ink);background:var(--tile);border:1.5px solid transparent;border-radius:10px;padding:.5rem;cursor:pointer;display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0}
 .tile .thumb{width:40px;height:60px;border-radius:5px;object-fit:cover;background:#1d1038;flex:none}
 .tile .tt{display:flex;flex-direction:column;gap:2px;min-width:0}
